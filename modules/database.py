@@ -7,9 +7,10 @@ logger = logging.getLogger(__name__)
 
 def get_db():
     """Database bağlantısı"""
-    conn = sqlite3.connect(Config.DATABASE_PATH)
+    conn = sqlite3.connect(Config.DATABASE_PATH, timeout=30.0, check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA foreign_keys = ON')  # CASCADE DELETE için gerekli
+    conn.execute('PRAGMA foreign_keys = ON')
+    conn.execute('PRAGMA journal_mode = WAL')
     return conn
 
 def init_db():
