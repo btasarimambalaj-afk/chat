@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <!-- Login Modal -->
+    <div class="modal active" id="loginModal">
+        <div class="modal-content">
+            <div class="modal-title">🔐 Admin Girişi</div>
+            <input type="password" class="modal-input" id="otpInput" placeholder="OTP Kodu" maxlength="6">
+            <button class="modal-btn" id="loginBtn">Giriş Yap</button>
+            <button class="modal-btn" id="requestOtpBtn" style="margin-top:8px;background:#6b7280">📱 OTP Gönder</button>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden">
+        <!-- Header -->
+        <div class="header">
+            <div class="company-avatar">🛡️</div>
+            <div class="company-info">
+                <div class="company-name">Admin Panel</div>
+                <div class="online-status">Sohbet Yönetimi</div>
+            </div>
+            <button class="logout-btn" id="logoutBtn">🚪</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">💬</div>
+                <div class="stat-value" id="totalMessages">0</div>
+                <div class="stat-label">Mesaj</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">👥</div>
+                <div class="stat-value" id="totalUsers">0</div>
+                <div class="stat-label">Kullanıcı</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">🔌</div>
+                <div class="stat-value" id="activeConnections">0</div>
+                <div class="stat-label">Bağlantı</div>
+            </div>
+        </div>
+
+        <!-- Search & Filter -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="🔎 Kullanıcı ara...">
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <button class="action-btn" id="selectAllBtn">☑️ Tümünü Seç</button>
+            <button class="action-btn delete-btn" id="deleteBtn" disabled>🗑️ Sil</button>
+        </div>
+
+        <!-- Users List -->
+        <div class="users-list" id="usersList">
+            <div class="loading">Yükleniyor...</div>
+        </div>
+
+        <!-- Chat View -->
+        <div class="chat-view hidden" id="chatView">
+            <div class="chat-header">
+                <button class="back-btn" id="backBtn">⬅️</button>
+                <div class="company-avatar" id="chatAvatar">A</div>
+                <div class="company-info">
+                    <div class="company-name" id="chatName">Kullanıcı</div>
+                    <div class="online-status" id="chatStatus">Çevrimdışı</div>
+                </div>
+            </div>
+
+            <div class="messages-container" id="chatMessages"></div>
+
+            <div class="input-area">
+                <button class="input-btn" id="adminImageBtn">📷</button>
+                <input type="file" id="adminImageInput" accept="image/*" class="hidden">
+                
+                <button class="input-btn" id="adminVoiceBtn">🎤</button>
+                
+                <textarea class="message-input" id="adminMessageInput" placeholder="Yanıt yazın..." rows="1"></textarea>
+                
+                <button class="send-btn input-btn" id="adminSendBtn" disabled>➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

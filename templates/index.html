@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Canlı Destek</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="company-avatar">🎧</div>
+        <div class="company-info">
+            <div class="company-name">Canlı Destek</div>
+            <div class="online-status">
+                <span class="online-dot"></span>
+                <span>Çevrimiçi • ~2 dk</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages-container" id="messagesContainer">
+        <div class="welcome-banner">
+            <div class="welcome-icon">👋</div>
+            <div class="welcome-title">Hoş Geldiniz!</div>
+            <div class="welcome-text">Size nasıl yardımcı olabiliriz?</div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+        <button class="input-btn" id="imageBtn" title="Resim Gönder">📷</button>
+        <input type="file" id="imageInput" accept="image/*" class="hidden">
+        
+        <button class="input-btn" id="voiceBtn" title="Ses Kaydı">🎤</button>
+        
+        <textarea 
+            class="message-input" 
+            id="messageInput" 
+            placeholder="Mesajınızı yazın..."
+            rows="1"
+        ></textarea>
+        
+        <button class="send-btn input-btn" id="sendBtn" disabled>➤</button>
+    </div>
+
+    <!-- Name Modal -->
+    <div class="modal" id="nameModal">
+        <div class="modal-content">
+            <div class="modal-title">👋 Hoş Geldiniz</div>
+            <input 
+                type="text" 
+                class="modal-input" 
+                id="nameInput" 
+                placeholder="İsminiz (isteğe bağlı)"
+                maxlength="40"
+            >
+            <button class="modal-btn" id="nameSubmitBtn">Başla</button>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

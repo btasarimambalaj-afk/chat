@@ -1,0 +1,13 @@
+.env
+database.db
+__pycache__/
+*.pyc
+*.pyo
+*.log
+static/uploads/*
+!static/uploads/.gitkeep
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
