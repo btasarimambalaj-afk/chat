@@ -33,20 +33,12 @@ os.makedirs(Config.VOICE_UPLOAD_FOLDER, exist_ok=True)
 # Database initialize
 init_db()
 
-# Telegram initialize (lazy)
+# Telegram initialize (disabled for now)
 telegram_bot = None
 
 def get_telegram_bot():
-    """Lazy telegram bot initialization"""
-    global telegram_bot
-    if telegram_bot is None and Config.TELEGRAM_BOT_TOKEN and Config.TELEGRAM_ADMIN_CHAT_ID:
-        try:
-            telegram_bot = TelegramBot(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_ADMIN_CHAT_ID)
-            init_telegram(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_ADMIN_CHAT_ID)
-            logger.info("Telegram bot initialized")
-        except Exception as e:
-            logger.error(f"Telegram init error: {e}")
-    return telegram_bot
+    """Telegram bot disabled temporarily"""
+    return None
 
 # Telegram Notifications Hook (BEFORE register)
 @chat_bp.after_request
