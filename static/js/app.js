@@ -50,7 +50,7 @@ async function registerUser() {
 // Init Chat
 function initChat() {
     loadMessages();
-    connectSSE();
+    // connectSSE(); // Temporarily disabled
 }
 
 // Load Messages
