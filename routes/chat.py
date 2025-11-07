@@ -35,7 +35,9 @@ def register_user():
         return jsonify({'success': True, 'user': existing})
     
     # Yeni kullanıcı oluştur
-    create_user(user_id, name)
+    success = create_user(user_id, name)
+    if not success:
+        return jsonify({'success': False, 'error': 'Kullanıcı oluşturulamadı'}), 500
     
     # Telegram bildirimi (app.py'de handle edilecek)
     return jsonify({'success': True, 'user_id': user_id})
@@ -56,6 +58,11 @@ def send_message():
         
         if message_type == 'text' and not security.validate_message(content):
             return jsonify({'success': False, 'error': 'Geçersiz mesaj'}), 400
+        
+        # Kullanıcı var mı kontrol et
+        user = get_user(user_id)
+        if not user:
+            return jsonify({'success': False, 'error': 'Kullanıcı bulunamadı. Lütfen sayfayı yenileyin.'}), 404
         
         # Mesajı kaydet
         message_id = send_text_message(user_id, sender_type, content)
