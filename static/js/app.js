@@ -371,10 +371,12 @@ function setupEventListeners() {
         input.style.height = Math.min(input.scrollHeight, 100) + 'px';
     });
     
-    input.addEventListener('keypress', (e) => {
+    input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            if (input.value.trim()) {
+                sendMessage();
+            }
         }
     });
     
