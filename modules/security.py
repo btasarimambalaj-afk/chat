@@ -16,7 +16,7 @@ class SecurityManager:
         self.rate_limits = {}
         
         # Ayarlar
-        self.MAX_REQUESTS = 20
+        self.MAX_REQUESTS = 100  # Test için artırıldı
         self.TIME_WINDOW = 60  # saniye
         self.CLEANUP_INTERVAL = 300  # 5 dakika
         self.last_cleanup = datetime.now()
