@@ -246,6 +246,8 @@ async function sendMessage() {
     
     if (!text) return;
     
+    console.log('Sending message:', {userId, text});
+    
     try {
         const res = await fetch('/api/messages', {
             method: 'POST',
@@ -258,6 +260,11 @@ async function sendMessage() {
             })
         });
         
+        console.log('Response status:', res.status);
+        
+        const responseData = await res.json();
+        console.log('Response data:', responseData);
+        
         if (res.ok) {
             addMessage({
                 user_id: userId,
@@ -269,23 +276,23 @@ async function sendMessage() {
             input.value = '';
             input.style.height = 'auto';
             document.getElementById('sendBtn').disabled = true;
+            showToast('Mesaj gönderildi', 'success');
         } else {
-            const error = await res.json();
-            console.error('Send error:', error);
+            console.error('Send error:', responseData);
             
             // Kullanıcı silinmişse localStorage temizle ve yenile
-            if (error.error && error.error.includes('bulunamadı')) {
+            if (responseData.error && responseData.error.includes('bulunamadı')) {
                 showToast('Oturumunuz sonlandırıldı. Sayfa yenilenecek.', 'error');
                 localStorage.removeItem('user_id');
                 localStorage.removeItem('user_name');
                 setTimeout(() => window.location.reload(), 2000);
             } else {
-                showToast(error.error || 'Mesaj gönderilemedi', 'error');
+                showToast(responseData.error || 'Mesaj gönderilemedi', 'error');
             }
         }
     } catch (error) {
         console.error('Send exception:', error);
-        showToast('Mesaj gönderilemedi', 'error');
+        showToast('Bağlantı hatası: ' + error.message, 'error');
     }
 }
 
