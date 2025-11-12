@@ -1,13 +1,7 @@
-// Müşteri Destek Sistemi - Ana JavaScript
+// Basitleştirilmiş Müşteri App
 let userId = localStorage.getItem('user_id');
 let userName = localStorage.getItem('user_name') || 'Anonim';
 let eventSource = null;
-let mediaRecorder = null;
-let audioChunks = [];
-
-// Offline timeout (5 dakika = 300000ms)
-let offlineTimer = null;
-const OFFLINE_TIMEOUT = 5 * 60 * 1000; // 5 dakika
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,86 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         initChat();
     }
-    
     setupEventListeners();
-    setupOfflineDetection();
 });
-
-// Offline Detection
-function setupOfflineDetection() {
-    // Sayfa görünür olduğunda timer'ı sıfırla
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            // Sayfa gizlendi, timer başlat
-            startOfflineTimer();
-        } else {
-            // Sayfa görünür, timer'ı iptal et
-            clearOfflineTimer();
-        }
-    });
-    
-    // Sayfa kapatılırken/yenilenirken son görülme zamanını kaydet
-    window.addEventListener('beforeunload', () => {
-        if (userId) {
-            localStorage.setItem('last_seen', Date.now());
-        }
-    });
-    
-    // Sayfa açıldığında son görülme kontrolü
-    checkLastSeen();
-}
-
-function checkLastSeen() {
-    if (!userId) return;
-    
-    const lastSeen = localStorage.getItem('last_seen');
-    if (lastSeen) {
-        const elapsed = Date.now() - parseInt(lastSeen);
-        
-        // 5 dakikadan fazla geçmişse sıfırla
-        if (elapsed > OFFLINE_TIMEOUT) {
-            resetSession('5 dakikadan fazla offline kaldınız. Yeni oturum başlatılıyor...');
-        }
-    }
-}
-
-function startOfflineTimer() {
-    clearOfflineTimer();
-    
-    offlineTimer = setTimeout(() => {
-        if (userId) {
-            resetSession('5 dakika boyunca aktif değildiniz. Oturum sonlandırıldı.');
-        }
-    }, OFFLINE_TIMEOUT);
-}
-
-function clearOfflineTimer() {
-    if (offlineTimer) {
-        clearTimeout(offlineTimer);
-        offlineTimer = null;
-    }
-}
-
-function resetSession(message) {
-    // Toast göster
-    showToast(message, 'error');
-    
-    // localStorage temizle
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('last_seen');
-    
-    // SSE bağlantısını kapat
-    if (eventSource) {
-        eventSource.close();
-        eventSource = null;
-    }
-    
-    // 2 saniye sonra sayfayı yenile
-    setTimeout(() => {
-        window.location.reload();
-    }, 2000);
-}
 
 // Name Modal
 function showNameModal() {
@@ -124,10 +40,7 @@ async function registerUser() {
             body: JSON.stringify({user_id: userId, name: userName})
         });
         const data = await res.json();
-        console.log('Register response:', data);
-        if (!data.success) {
-            showToast('Kayıt başarısız: ' + data.error, 'error');
-        }
+        console.log('Register:', data);
         return data.success;
     } catch (error) {
         console.error('Register error:', error);
@@ -139,7 +52,7 @@ async function registerUser() {
 // Init Chat
 function initChat() {
     loadMessages();
-    connectSSE(); // Kullanıcı silme bildirimi için aktif
+    connectSSE();
 }
 
 // Load Messages
@@ -149,7 +62,8 @@ async function loadMessages() {
         const data = await res.json();
         
         if (data.success) {
-            document.getElementById('messagesContainer').innerHTML = '<div class="welcome-banner"><div class="welcome-icon">👋</div><div class="welcome-title">Hoş Geldiniz!</div><div class="welcome-text">Size nasıl yardımcı olabiliriz?</div></div>';
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '<div class="welcome-banner"><div class="welcome-icon">👋</div><div class="welcome-title">Hoş Geldiniz!</div><div class="welcome-text">Size nasıl yardımcı olabiliriz?</div></div>';
             data.messages.forEach(msg => addMessage(msg));
         }
     } catch (error) {
@@ -159,28 +73,18 @@ async function loadMessages() {
 
 // SSE Connection
 function connectSSE() {
+    if (eventSource) return;
+    
     eventSource = new EventSource(`/api/stream/${userId}`);
     
     eventSource.onmessage = (e) => {
         const data = JSON.parse(e.data);
+        console.log('SSE:', data);
         
-        // Kullanıcı silindi bildirimi
         if (data.type === 'user_deleted') {
-            showToast(data.message || 'Oturumunuz sonlandırıldı', 'error');
-            
-            // localStorage'dan tüm verileri temizle
-            localStorage.removeItem('user_id');
-            localStorage.removeItem('user_name');
-            
-            // SSE bağlantısını kapat
-            if (eventSource) {
-                eventSource.close();
-            }
-            
-            // 2 saniye sonra sayfayı yenile
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
+            showToast('Oturumunuz sonlandırıldı', 'error');
+            localStorage.clear();
+            setTimeout(() => window.location.reload(), 2000);
             return;
         }
         
@@ -190,11 +94,13 @@ function connectSSE() {
     };
     
     eventSource.onerror = () => {
+        console.log('SSE error, reconnecting...');
+        eventSource = null;
         setTimeout(connectSSE, 5000);
     };
 }
 
-// Add Message to UI
+// Add Message
 function addMessage(msg) {
     const container = document.getElementById('messagesContainer');
     const div = document.createElement('div');
@@ -209,22 +115,7 @@ function addMessage(msg) {
     
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble';
-    
-    if (msg.message_type === 'text') {
-        bubble.textContent = msg.content;
-    } else if (msg.message_type === 'image') {
-        const img = document.createElement('img');
-        img.src = `/${msg.content}`;
-        img.className = 'message-image';
-        img.style.maxWidth = '200px';
-        bubble.appendChild(img);
-    } else if (msg.message_type === 'voice') {
-        const audio = document.createElement('audio');
-        audio.src = `/${msg.content}`;
-        audio.controls = true;
-        audio.style.maxWidth = '200px';
-        bubble.appendChild(audio);
-    }
+    bubble.textContent = msg.content;
     
     const time = document.createElement('div');
     time.className = 'message-time';
@@ -236,17 +127,17 @@ function addMessage(msg) {
     div.appendChild(content);
     container.appendChild(div);
     
-    scrollToBottom();
+    container.scrollTop = container.scrollHeight;
 }
 
-// Send Text Message
+// Send Message
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     
     if (!text) return;
     
-    console.log('Sending message:', {userId, text});
+    console.log('Sending:', text);
     
     try {
         const res = await fetch('/api/messages', {
@@ -260,110 +151,20 @@ async function sendMessage() {
             })
         });
         
-        console.log('Response status:', res.status);
+        const data = await res.json();
+        console.log('Response:', data);
         
-        const responseData = await res.json();
-        console.log('Response data:', responseData);
-        
-        if (res.ok) {
-            addMessage({
-                user_id: userId,
-                sender_type: 'customer',
-                message_type: 'text',
-                content: text,
-                created_at: new Date().toISOString()
-            });
+        if (data.success) {
             input.value = '';
             input.style.height = 'auto';
             document.getElementById('sendBtn').disabled = true;
-            showToast('Mesaj gönderildi', 'success');
+            showToast('Gönderildi', 'success');
         } else {
-            console.error('Send error:', responseData);
-            
-            // Kullanıcı silinmişse localStorage temizle ve yenile
-            if (responseData.error && responseData.error.includes('bulunamadı')) {
-                showToast('Oturumunuz sonlandırıldı. Sayfa yenilenecek.', 'error');
-                localStorage.removeItem('user_id');
-                localStorage.removeItem('user_name');
-                setTimeout(() => window.location.reload(), 2000);
-            } else {
-                showToast(responseData.error || 'Mesaj gönderilemedi', 'error');
-            }
+            showToast(data.error || 'Hata', 'error');
         }
     } catch (error) {
-        console.error('Send exception:', error);
-        showToast('Bağlantı hatası: ' + error.message, 'error');
-    }
-}
-
-// Upload Image
-async function uploadImage(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('user_id', userId);
-    formData.append('sender_type', 'customer');
-    
-    try {
-        const res = await fetch('/api/files/upload/image', {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (res.ok) {
-            showToast('Resim gönderildi', 'success');
-            setTimeout(() => loadMessages(), 500);
-        }
-    } catch (error) {
-        showToast('Resim gönderilemedi', 'error');
-    }
-}
-
-// Voice Recording
-async function startRecording() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        
-        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-        mediaRecorder.onstop = uploadVoice;
-        
-        mediaRecorder.start();
-        document.getElementById('voiceBtn').classList.add('recording');
-        document.getElementById('voiceBtn').textContent = '⏹️';
-    } catch (error) {
-        showToast('Mikrofon erişimi reddedildi', 'error');
-    }
-}
-
-function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        document.getElementById('voiceBtn').classList.remove('recording');
-        document.getElementById('voiceBtn').textContent = '🎤';
-    }
-}
-
-async function uploadVoice() {
-    const blob = new Blob(audioChunks, {type: 'audio/webm'});
-    const formData = new FormData();
-    formData.append('file', blob, 'voice.webm');
-    formData.append('user_id', userId);
-    formData.append('sender_type', 'customer');
-    
-    try {
-        const res = await fetch('/api/files/upload/voice', {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (res.ok) {
-            showToast('Ses kaydı gönderildi', 'success');
-            setTimeout(() => loadMessages(), 500);
-        }
-    } catch (error) {
-        showToast('Ses gönderilemedi', 'error');
+        console.error('Send error:', error);
+        showToast('Bağlantı hatası', 'error');
     }
 }
 
@@ -388,26 +189,6 @@ function setupEventListeners() {
     });
     
     sendBtn.addEventListener('click', sendMessage);
-    
-    document.getElementById('imageBtn').addEventListener('click', () => {
-        document.getElementById('imageInput').click();
-    });
-    
-    document.getElementById('imageInput').addEventListener('change', (e) => {
-        if (e.target.files[0]) {
-            uploadImage(e.target.files[0]);
-        }
-    });
-    
-    let isRecording = false;
-    document.getElementById('voiceBtn').addEventListener('click', () => {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
-        isRecording = !isRecording;
-    });
 }
 
 // Utilities
@@ -416,16 +197,10 @@ function formatTime(timestamp) {
     return date.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
 }
 
-function scrollToBottom() {
-    const container = document.getElementById('messagesContainer');
-    container.scrollTop = container.scrollHeight;
-}
-
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
     document.body.appendChild(toast);
-    
     setTimeout(() => toast.remove(), 3000);
 }
