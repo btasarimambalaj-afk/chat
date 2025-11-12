@@ -92,6 +92,13 @@ def remove_user(user_id):
     if not security.validate_user_id(user_id):
         return jsonify({'success': False, 'error': 'Geçersiz user ID'}), 400
     
+    # SSE ile müşteriye bildirim gönder (silinmeden önce)
+    from modules.sse_manager import sse_manager
+    sse_manager.notify(user_id, {
+        'type': 'user_deleted',
+        'message': 'Oturumunuz sonlandırıldı. Sayfa yenilenecek.'
+    })
+    
     # Dosyaları sil
     messages = get_messages(user_id)
     for msg in messages:
@@ -104,6 +111,9 @@ def remove_user(user_id):
     
     # Database'den sil
     delete_user(user_id)
+    
+    # SSE queue'yu temizle
+    sse_manager.remove_queue(user_id)
     
     return jsonify({'success': True, 'message': 'Kullanıcı silindi'})
 

@@ -5,6 +5,10 @@ let eventSource = null;
 let mediaRecorder = null;
 let audioChunks = [];
 
+// Offline timeout (5 dakika = 300000ms)
+let offlineTimer = null;
+const OFFLINE_TIMEOUT = 5 * 60 * 1000; // 5 dakika
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     if (!userId) {
@@ -14,7 +18,84 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     setupEventListeners();
+    setupOfflineDetection();
 });
+
+// Offline Detection
+function setupOfflineDetection() {
+    // Sayfa görünür olduğunda timer'ı sıfırla
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            // Sayfa gizlendi, timer başlat
+            startOfflineTimer();
+        } else {
+            // Sayfa görünür, timer'ı iptal et
+            clearOfflineTimer();
+        }
+    });
+    
+    // Sayfa kapatılırken/yenilenirken son görülme zamanını kaydet
+    window.addEventListener('beforeunload', () => {
+        if (userId) {
+            localStorage.setItem('last_seen', Date.now());
+        }
+    });
+    
+    // Sayfa açıldığında son görülme kontrolü
+    checkLastSeen();
+}
+
+function checkLastSeen() {
+    if (!userId) return;
+    
+    const lastSeen = localStorage.getItem('last_seen');
+    if (lastSeen) {
+        const elapsed = Date.now() - parseInt(lastSeen);
+        
+        // 5 dakikadan fazla geçmişse sıfırla
+        if (elapsed > OFFLINE_TIMEOUT) {
+            resetSession('5 dakikadan fazla offline kaldınız. Yeni oturum başlatılıyor...');
+        }
+    }
+}
+
+function startOfflineTimer() {
+    clearOfflineTimer();
+    
+    offlineTimer = setTimeout(() => {
+        if (userId) {
+            resetSession('5 dakika boyunca aktif değildiniz. Oturum sonlandırıldı.');
+        }
+    }, OFFLINE_TIMEOUT);
+}
+
+function clearOfflineTimer() {
+    if (offlineTimer) {
+        clearTimeout(offlineTimer);
+        offlineTimer = null;
+    }
+}
+
+function resetSession(message) {
+    // Toast göster
+    showToast(message, 'error');
+    
+    // localStorage temizle
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('last_seen');
+    
+    // SSE bağlantısını kapat
+    if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+    }
+    
+    // 2 saniye sonra sayfayı yenile
+    setTimeout(() => {
+        window.location.reload();
+    }, 2000);
+}
 
 // Name Modal
 function showNameModal() {
@@ -58,7 +139,7 @@ async function registerUser() {
 // Init Chat
 function initChat() {
     loadMessages();
-    // connectSSE(); // Temporarily disabled
+    connectSSE(); // Kullanıcı silme bildirimi için aktif
 }
 
 // Load Messages
@@ -82,6 +163,27 @@ function connectSSE() {
     
     eventSource.onmessage = (e) => {
         const data = JSON.parse(e.data);
+        
+        // Kullanıcı silindi bildirimi
+        if (data.type === 'user_deleted') {
+            showToast(data.message || 'Oturumunuz sonlandırıldı', 'error');
+            
+            // localStorage'dan tüm verileri temizle
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('user_name');
+            
+            // SSE bağlantısını kapat
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            // 2 saniye sonra sayfayı yenile
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            return;
+        }
+        
         if (data.type !== 'ping') {
             addMessage(data);
         }
@@ -170,7 +272,16 @@ async function sendMessage() {
         } else {
             const error = await res.json();
             console.error('Send error:', error);
-            showToast(error.error || 'Mesaj gönderilemedi', 'error');
+            
+            // Kullanıcı silinmişse localStorage temizle ve yenile
+            if (error.error && error.error.includes('bulunamadı')) {
+                showToast('Oturumunuz sonlandırıldı. Sayfa yenilenecek.', 'error');
+                localStorage.removeItem('user_id');
+                localStorage.removeItem('user_name');
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                showToast(error.error || 'Mesaj gönderilemedi', 'error');
+            }
         }
     } catch (error) {
         console.error('Send exception:', error);
