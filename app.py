@@ -32,8 +32,11 @@ os.makedirs(Config.VOICE_UPLOAD_FOLDER, exist_ok=True)
 # Database initialize
 init_db()
 
-# Telegram disabled
+# Telegram bot
 def get_telegram_bot():
+    if Config.TELEGRAM_BOT_TOKEN and Config.TELEGRAM_ADMIN_CHAT_ID:
+        from modules.telegram_bot import TelegramBot
+        return TelegramBot(Config.TELEGRAM_BOT_TOKEN, Config.TELEGRAM_ADMIN_CHAT_ID)
     return None
 
 # Telegram Notifications Hook (BEFORE register)
